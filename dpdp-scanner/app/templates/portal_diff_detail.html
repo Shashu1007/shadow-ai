@@ -1,0 +1,46 @@
+{% extends "portal_base.html" %}
+{% block title %}Diff #{{ diff.id }} — {{ client.domain }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('portal.dashboard') }}">← Dashboard</a></p>
+<h1>Diff #{{ diff.id }} <span class="badge badge-{{ diff.severity }}">{{ diff.severity }}</span></h1>
+<p class="muted">{{ diff.created_at }}</p>
+
+<h2>New ({{ new|length }})</h2>
+{% if not new %}<div class="card empty">Nothing new.</div>{% else %}
+<table>
+  <tr><th>Severity</th><th>Detail</th></tr>
+  {% for e in new %}
+  <tr>
+    <td><span class="badge badge-{{ e.severity }}">{{ e.severity }}</span></td>
+    <td>{{ e.finding.detail }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Changed ({{ changed|length }})</h2>
+{% if not changed %}<div class="card empty">Nothing changed.</div>{% else %}
+<table>
+  <tr><th>Severity</th><th>Detail</th></tr>
+  {% for e in changed %}
+  <tr>
+    <td><span class="badge badge-{{ e.severity }}">{{ e.severity }}</span></td>
+    <td>{{ e.finding.detail }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Removed ({{ removed|length }})</h2>
+{% if not removed %}<div class="card empty">Nothing removed.</div>{% else %}
+<table>
+  <tr><th>Severity</th><th>Detail</th></tr>
+  {% for e in removed %}
+  <tr>
+    <td><span class="badge badge-{{ e.severity }}">{{ e.severity }}</span></td>
+    <td>{{ e.finding.detail }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Clients — DPDP Drift Scanner{% endblock %}
+{% block content %}
+<h1>Clients</h1>
+<p class="muted">Everyone else audits you once. We watch your site every week.</p>
+
+{% if health_issues %}
+<div class="card" style="border-color: var(--medium); background: rgba(245,166,35,0.08); margin-bottom:14px;">
+  <strong style="color: var(--medium);">⚠ {{ health_issues|length }} fleet health issue(s)</strong> — scanning
+  isn't keeping up with the "every week" promise for these clients:
+  <ul style="margin:8px 0 0 18px; padding:0;">
+    {% for issue in health_issues %}
+    <li><a href="{{ url_for('client_detail', client_id=issue.client_id) }}">{{ issue.domain }}</a> — {{ issue.detail }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if not summary %}
+<div class="card empty">No clients yet. <a href="{{ url_for('new_client') }}">Add your first client</a> to run a scan.</div>
+{% else %}
+<table>
+  <tr>
+    <th>Domain</th><th>Plan</th><th>Scans</th><th>Last scan</th><th>Last severity</th><th>Open alerts</th><th></th>
+  </tr>
+  {% for row in summary %}
+  <tr>
+    <td><a href="{{ url_for('client_detail', client_id=row.client.id) }}">{{ row.client.domain }}</a></td>
+    <td>{{ row.client.plan_tier }}</td>
+    <td>{{ row.scan_count }}</td>
+    <td>{{ row.last_scan.scanned_at if row.last_scan else '—' }}</td>
+    <td>
+      {% if row.last_severity %}
+        <span class="badge badge-{{ row.last_severity }}">{{ row.last_severity }}</span>
+      {% else %}—{% endif %}
+    </td>
+    <td>{{ row.open_alerts }}</td>
+    <td><a href="{{ url_for('client_detail', client_id=row.client.id) }}">View →</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

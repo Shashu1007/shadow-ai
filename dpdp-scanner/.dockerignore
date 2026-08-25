@@ -1,0 +1,19 @@
+# Never bake local dev/demo state into the production image — the platform's
+# persistent volume (fly.toml [mounts] / Railway volume) provides real
+# storage at runtime. Shipping the demo DB here would mean prod starts with
+# stale fixture data instead of a clean schema, or worse, looks like it
+# shipped fake "client" data in a public image.
+data/
+*.db
+
+__pycache__/
+*.pyc
+.git/
+.gitignore
+venv/
+.venv/
+logs/
+*.log
+
+# Test fixture site isn't needed at runtime, only for local dev/testing
+tests/

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ client.domain }} — DPDP Drift Scanner{% endblock %}
+{% block content %}
+<h1>{{ client.domain }} {% if not client.active %}<span class="badge badge-low">paused</span>{% endif %}</h1>
+<p class="muted">Plan: {{ client.plan_tier }} · WhatsApp: {{ client.whatsapp_number or '—' }} · Client since {{ client.created_at }} · Min alert severity: {{ client.min_alert_severity }}</p>
+<form method="post" action="{{ url_for('toggle_client_active', client_id=client.id) }}" style="margin: 8px 0 4px;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn-ghost" type="submit">{{ 'Pause scanning' if client.active else 'Resume scanning' }}</button>
+</form>
+
+<div class="stat-row">
+  <div class="stat"><div class="n">{{ scans|length }}</div><div class="l">Scans logged</div></div>
+  <div class="stat"><div class="n">{{ diffs|length }}</div><div class="l">Diffs run</div></div>
+  <div class="stat"><div class="n">{{ alerts|selectattr('status','equalto','open')|list|length }}</div><div class="l">Open alerts</div></div>
+  <div class="stat"><div class="n">{{ drafts|length }}</div><div class="l">Pending drafts</div></div>
+</div>
+
+<h2>Scan history <span class="muted">(audit trail)</span></h2>
+{% if not scans %}
+<div class="card empty">No scans yet.</div>
+{% else %}
+<table>
+  <tr><th>Scan ID</th><th>Scanned at</th><th>Pages</th><th>Status</th><th></th></tr>
+  {% for s in scans %}
+  <tr>
+    <td>#{{ s.id }}</td>
+    <td>{{ s.scanned_at }}</td>
+    <td>{{ s.page_count }}</td>
+    <td>{{ s.status }}</td>
+    <td><a href="{{ url_for('scan_detail', client_id=client.id, scan_id=s.id) }}">View findings →</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Diff history</h2>
+{% if not diffs %}
+<div class="card empty">No diffs yet — runs after the second scan.</div>
+{% else %}
+<table>
+  <tr><th>Diff ID</th><th>Run at</th><th>Severity</th><th>New / Changed / Removed</th><th></th></tr>
+  {% for d in diffs %}
+  <tr>
+    <td>#{{ d.id }}</td>
+    <td>{{ d.created_at }}</td>
+    <td><span class="badge badge-{{ d.severity }}">{{ d.severity }}</span></td>
+    <td>{{ (d.new_json|fmt_findings)|length }} / {{ (d.changed_json|fmt_findings)|length }} / {{ (d.removed_json|fmt_findings)|length }}</td>
+    <td><a href="{{ url_for('diff_detail', client_id=client.id, diff_id=d.id) }}">View diff →</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Alert log</h2>
+{% if not alerts %}
+<div class="card empty">No alerts fired yet.</div>
+{% else %}
+<table>
+  <tr><th>Sent at</th><th>Severity</th><th>Message</th><th>Status</th><th></th></tr>
+  {% for a in alerts %}
+  <tr>
+    <td>{{ a.created_at }}</td>
+    <td><span class="badge badge-{{ a.severity }}">{{ a.severity }}</span></td>
+    <td class="mono">{{ a.message }}</td>
+    <td><span class="badge badge-{{ a.status }}">{{ a.status }}</span></td>
+    <td>
+      {% if a.status == 'open' %}
+      <form class="inline" method="post" action="{{ url_for('handle_alert', alert_id=a.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-ghost" type="submit">Mark handled</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Drafts <span class="muted">(auto-generated, never auto-published)</span></h2>
+<p><a href="{{ url_for('drafts_list', client_id=client.id) }}">View all drafts →</a></p>
+
+<h2>Client portal access</h2>
+{% if portal_password_error %}
+<div class="card" style="border-color: var(--high); background: rgba(229,72,77,0.08); max-width:460px;">{{ portal_password_error }}</div>
+{% endif %}
+<div class="card" style="max-width:460px">
+  <p class="muted" style="margin-top:0">
+    {% if client.portal_password_hash %}
+    Portal access is <strong style="color: var(--green);">set</strong>. The client can log in at
+    <code>/portal/login</code> with domain <code>{{ client.domain }}</code> and the password you set below —
+    there's no email integration, so relay the password to them yourself (WhatsApp, a call).
+    They can view their own findings and approve or reject their own drafted notices.
+    {% else %}
+    No portal password set — the client has no login yet. Set one below and relay it to them yourself.
+    {% endif %}
+  </p>
+  <form method="post" action="{{ url_for('set_client_portal_password', client_id=client.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="portal_password">{{ 'Change portal password' if client.portal_password_hash else 'Set portal password' }}</label>
+    <input type="text" id="portal_password" name="portal_password" placeholder="min. 8 characters, leave blank to revoke access">
+    <div style="margin-top:16px">
+      <button class="btn" type="submit">{{ 'Update' if client.portal_password_hash else 'Set password' }}</button>
+      {% if client.portal_password_hash %}<span class="muted" style="margin-left:10px">Leave blank and submit to revoke access.</span>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

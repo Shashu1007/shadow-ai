@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Operators — DPDP Drift Scanner{% endblock %}
+{% block content %}
+<h1>Operators</h1>
+<p class="muted">Dashboard accounts with full access to every client's findings, alerts, and drafts. Deactivate someone who's left rather than sharing a password everyone has to remember to rotate.</p>
+
+{% if error %}
+<div class="card" style="border-color: var(--high); background: rgba(229,72,77,0.08); max-width:460px;">{{ error }}</div>
+{% endif %}
+
+{% if not operators %}
+<div class="card empty">No operators yet.</div>
+{% else %}
+<table>
+  <tr><th>Username</th><th>Status</th><th>Added</th><th></th></tr>
+  {% for o in operators %}
+  <tr>
+    <td>{{ o.username }}</td>
+    <td><span class="badge {{ 'badge-handled' if o.active else 'badge-low' }}">{{ 'active' if o.active else 'deactivated' }}</span></td>
+    <td>{{ o.created_at }}</td>
+    <td>
+      <form class="inline" method="post" action="{{ url_for('toggle_operator_active', operator_id=o.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-ghost" type="submit">{{ 'Deactivate' if o.active else 'Reactivate' }}</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Add an operator</h2>
+<div class="card" style="max-width:420px">
+  <form method="post" action="{{ url_for('new_operator') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" required>
+    <label for="password">Password</label>
+    <input type="text" id="password" name="password" placeholder="min. 8 characters" required>
+    <div style="margin-top:16px">
+      <button class="btn" type="submit">Add operator</button>
+    </div>
+  </form>
+</div>
+<p class="muted" style="margin-top:14px">For headless bootstrapping (no dashboard access yet), use <code>python scripts/manage_operators.py add &lt;username&gt;</code> instead.</p>
+{% endblock %}

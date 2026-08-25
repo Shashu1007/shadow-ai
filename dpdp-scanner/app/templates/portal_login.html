@@ -1,0 +1,24 @@
+{% extends "portal_base.html" %}
+{% block title %}Log in — Client Portal{% endblock %}
+{% block content %}
+<h1>Client portal</h1>
+<p class="muted">View your own scan findings and approve or reject drafted notices. Your operator sets this password and shares it with you directly — there's no email reset yet, so ask them if you're locked out.</p>
+
+{% if error %}
+<div class="card" style="border-color: var(--high); background: rgba(229,72,77,0.08); max-width:380px;">{{ error }}</div>
+{% endif %}
+
+<div class="card" style="max-width:380px">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="domain">Your domain</label>
+    <input type="text" id="domain" name="domain" placeholder="example.com" value="{{ domain or '' }}" required autofocus>
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required>
+    <div style="margin-top:16px">
+      <button class="btn" type="submit">Log in</button>
+    </div>
+  </form>
+</div>
+<p class="muted" style="margin-top:14px">New here? <a href="{{ url_for('public_signup') }}">Start a free trial →</a></p>
+{% endblock %}

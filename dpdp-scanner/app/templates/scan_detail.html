@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Scan #{{ scan_id }} — {{ client.domain }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('client_detail', client_id=client.id) }}">← {{ client.domain }}</a></p>
+<h1>Scan #{{ scan_id }} findings</h1>
+<p class="muted">{{ findings|length }} findings on this scan.</p>
+
+<table>
+  <tr><th>Confidence</th><th>Type</th><th>DPDP relevance</th><th>Detail</th><th>Page</th></tr>
+  {% for f in findings %}
+  <tr>
+    <td><span class="badge badge-{{ 'high' if f.confidence=='high' else ('low' if f.confidence=='low' else 'medium') }}">{{ f.confidence }}</span></td>
+    <td>{{ f.type }}</td>
+    <td>{{ f.dpdp_relevance }}</td>
+    <td>{{ f.detail }}</td>
+    <td class="muted">{{ f.page_url }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

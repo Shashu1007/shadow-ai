@@ -1,0 +1,36 @@
+{% extends "portal_base.html" %}
+{% block title %}Drafts — {{ client.domain }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('portal.dashboard') }}">← Dashboard</a></p>
+<h1>Drafted content</h1>
+<p class="muted">Auto-drafted from new findings. Approving or rejecting here only records your decision in this
+system — it does not publish, send, or change anything on your site. You (or whoever manages your privacy
+notice) still need to actually apply it wherever it belongs.</p>
+
+{% if not drafts %}
+<div class="card empty">No drafts yet.</div>
+{% else %}
+  {% for d in drafts %}
+  <div class="card">
+    <span class="badge badge-{{ d.status }}">{{ d.status }}</span>
+    <span class="muted">{{ d.kind }}</span>
+    <p class="mono" style="margin-top:8px">{{ d.content }}</p>
+    <p class="muted">Created {{ d.created_at }}{% if d.decided_at %} · decided {{ d.decided_at }} by {{ d.decided_by }}{% endif %}</p>
+    {% if d.status == 'draft' %}
+    <div style="margin-top:10px">
+      <form class="inline" method="post" action="{{ url_for('portal.decide_draft', draft_id=d.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="decision" value="approved">
+        <button class="btn" type="submit">Approve</button>
+      </form>
+      <form class="inline" method="post" action="{{ url_for('portal.decide_draft', draft_id=d.id) }}" style="margin-left:8px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="decision" value="rejected">
+        <button class="btn btn-danger" type="submit">Reject</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

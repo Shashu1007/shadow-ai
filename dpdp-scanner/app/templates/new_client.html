@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Add Client — DPDP Drift Scanner{% endblock %}
+{% block content %}
+<h1>Add a client</h1>
+{% if error %}
+<div class="card" style="border-color: var(--high); background: rgba(229,72,77,0.08); max-width:420px;">{{ error }}</div>
+{% endif %}
+<div class="card" style="max-width:420px">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="domain">Domain</label>
+    <input type="text" id="domain" name="domain" placeholder="example.com" value="{{ domain or '' }}" required>
+    <label for="whatsapp">WhatsApp number (optional)</label>
+    <input type="text" id="whatsapp" name="whatsapp" placeholder="+919999999999" value="{{ whatsapp or '' }}">
+    <div style="margin-top:16px">
+      <button class="btn" type="submit">Add client</button>
+    </div>
+  </form>
+</div>
+<p class="muted" style="margin-top:14px">This registers the client. Run a scan from the CLI to populate their first snapshot:<br>
+<code>python run_scan.py --domain example.com --whatsapp +91...</code></p>
+{% endblock %}

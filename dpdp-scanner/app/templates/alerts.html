@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Alerts — DPDP Drift Scanner{% endblock %}
+{% block content %}
+<h1>Alerts</h1>
+<p class="muted">
+  <a href="{{ url_for('alerts_list') }}">All</a> ·
+  <a href="{{ url_for('alerts_list', status='open') }}">Open</a> ·
+  <a href="{{ url_for('alerts_list', status='handled') }}">Handled</a>
+</p>
+
+{% if not alerts %}
+<div class="card empty">No alerts.</div>
+{% else %}
+<table>
+  <tr><th>Client</th><th>Sent at</th><th>Severity</th><th>Message</th><th>Status</th><th></th></tr>
+  {% for a in alerts %}
+  <tr>
+    <td><a href="{{ url_for('client_detail', client_id=a.client_id) }}">{{ a.domain }}</a></td>
+    <td>{{ a.created_at }}</td>
+    <td><span class="badge badge-{{ a.severity }}">{{ a.severity }}</span></td>
+    <td class="mono">{{ a.message }}</td>
+    <td><span class="badge badge-{{ a.status }}">{{ a.status }}</span></td>
+    <td>
+      {% if a.status == 'open' %}
+      <form class="inline" method="post" action="{{ url_for('handle_alert', alert_id=a.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-ghost" type="submit">Mark handled</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

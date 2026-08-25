@@ -1,0 +1,31 @@
+# flask..httpx were pre-installed in the original build sandbox (no PyPI
+# access there — see README). gunicorn was added for production hosting and
+# has NOT been installed/tested in that sandbox; `docker build` installs it
+# fresh from PyPI like any normal deploy.
+flask>=3.0
+jinja2>=3.1
+werkzeug>=3.0
+playwright>=1.45
+beautifulsoup4>=4.12
+lxml>=5.0
+pydantic>=2.7
+requests>=2.31
+httpx>=0.27
+gunicorn>=22.0
+
+# Dashboard auth + CSRF (app/auth.py). itsdangerous ships as a Flask
+# dependency already, but pinning it explicitly since it's imported
+# directly, not just transitively.
+itsdangerous>=2.1
+
+# --- Optional, not required to run ---
+# Real WhatsApp sending and the Gemini classifier both use plain httpx calls
+# (already a dependency above) — no Twilio/Google SDK needed.
+#
+# Uncomment to enable optional error tracking (SENTRY_DSN env var — see
+# app/logging_setup.py). Not installed by default: this project runs fully
+# without it, and the original build sandbox this was developed in had no
+# PyPI access, so keeping every optional integration truly optional (degrade
+# to a logged warning, never a hard ImportError) is a deliberate pattern
+# here, not an oversight.
+# sentry-sdk>=2.0

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} — DPDP Drift Scanner{% endblock %}
+{% block content %}
+<h1>{{ code }}</h1>
+<div class="card">{{ message }}</div>
+<p class="muted" style="margin-top:14px"><a href="{{ url_for('index') }}">← Back to clients</a></p>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "portal_base.html" %}
+{% block title %}Start your free trial — DPDP Drift Scanner{% endblock %}
+{% block content %}
+<h1>Start your free trial</h1>
+<p class="muted">We'll watch your site for new forms, cookies, and third-party scripts that touch personal data —
+and flag anything that changes. No payment required for the trial. After signup you'll be logged straight into
+your client portal; your first scan is scheduled by our team shortly after.</p>
+
+{% if error %}
+<div class="card" style="border-color: var(--high); background: rgba(229,72,77,0.08); max-width:420px;">{{ error }}</div>
+{% endif %}
+
+<div class="card" style="max-width:420px">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="domain">Your website domain</label>
+    <input type="text" id="domain" name="domain" placeholder="example.com" value="{{ domain or '' }}" required autofocus>
+    <label for="whatsapp">WhatsApp number (optional, for alerts)</label>
+    <input type="text" id="whatsapp" name="whatsapp" placeholder="+919999999999" value="{{ whatsapp or '' }}">
+    <label for="password">Choose a portal password</label>
+    <input type="password" id="password" name="password" placeholder="min. 8 characters" required>
+    <label for="confirm_password">Confirm password</label>
+    <input type="password" id="confirm_password" name="confirm_password" required>
+    <div style="margin-top:16px">
+      <button class="btn" type="submit">Start free trial</button>
+    </div>
+  </form>
+</div>
+<p class="muted" style="margin-top:14px">Already have an account? <a href="{{ url_for('portal.login') }}">Log in to your portal →</a></p>
+{% endblock %}

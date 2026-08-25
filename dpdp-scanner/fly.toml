@@ -1,0 +1,85 @@
+# Fly.io app config for the DPDP Drift Scanner.
+#
+# NOTE ON VERIFICATION: this file could not be built/deployed against a live
+# Fly account from where it was written (no outbound network to Fly's API in
+# that environment), so it's written to the schema current as of this
+# project's build but hasn't been proven against a real `fly deploy`. Fly's
+# config format has changed shape before (app-based -> Machines-based). Run
+# `fly config validate` before your first real deploy — a schema mismatch
+# fails loudly there rather than silently misbehaving, so this is a quick,
+# safe check, not a leap of faith.
+#
+# Deploy with:
+#   fly launch --no-deploy   # first time only — creates the app, skip its
+#                             # own Dockerfile detection prompt since we have one
+#   fly config validate      # confirm this file matches your flyctl's current schema
+#   fly volumes create dpdp_data --size 1 --region <your-region>
+#   fly deploy
+#
+# `app` name must be globally unique on Fly — change it before first deploy.
+app = "dpdp-drift-scanner"
+primary_region = "bom"  # Mumbai — closest to India-based clients/DPDP scope; change if needed
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "5000"
+  # Set real secrets with `fly secrets set KEY=value` — never put API keys,
+  # the dashboard password, or WhatsApp credentials here, this file is
+  # committed to your repo. At minimum, before this is reachable by anyone
+  # but you:
+  #   fly secrets set DASHBOARD_PASSWORD=...
+  # See .env.example for every other optional secret (GEMINI_API_KEY,
+  # TWILIO_*, SENTRY_DSN, ...).
+
+# --- Always-on web dashboard ---
+[http_service]
+  internal_port = 5000
+  force_https = true
+  auto_stop_machines = "suspend"   # scale-to-zero when idle — keeps this on the free allowance
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  # /healthz is unauthenticated by design (see app/auth.py) and checks the
+  # DB is actually reachable, not just that the process answers — a stuck
+  # or corrupt DB file fails this and Fly will restart the machine.
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  processes = ["app"]
+
+# SQLite needs a real disk, not the ephemeral container filesystem, or every
+# redeploy wipes your scan history. Create this volume once (see command
+# above) before the first deploy that mounts it.
+[mounts]
+  source = "dpdp_data"
+  destination = "/app/data"
+
+[processes]
+  app = "gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 app.web:app"
+
+# --- Scheduled weekly scan ---
+# Fly doesn't have a first-class "cron" primitive the way Railway does; the
+# standard pattern is a separate Fly Machine that runs on a schedule via
+# `fly machine run` + `fly machine schedule`, OR simplest for an MVP: keep
+# scanning triggered by an external scheduler (GitHub Actions cron, or any
+# cron-capable box you already have) that calls out to this app, OR just
+# `fly ssh console -C "python run_scan.py --domain ... --whatsapp ..."` by
+# hand / from your own crontab against `fly ssh console`.
+#
+# The cleanest low-effort option: a free GitHub Actions workflow on a cron
+# schedule that runs `fly ssh console -C "python run_scan.py --all"` — one
+# call scans every active client already registered in the DB (per-client
+# isolation is built in, see app/orchestrator.py, so one bad site doesn't
+# skip the rest). See .github/workflows/weekly-scan.yml for a ready-made
+# example — set the FLY_API_TOKEN repo secret and you're done; no per-client
+# editing needed since --all reads clients from the DB, not from this file.
