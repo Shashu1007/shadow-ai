@@ -1,0 +1,90 @@
+# Triggers the weekly DPDP drift scan (and a daily fleet health check) by
+# running commands inside the already-deployed Fly app (over `fly ssh
+# console`), rather than running them inside the GitHub Actions runner
+# itself. This matters: both need to read/write the SAME SQLite database
+# the dashboard reads from, and that database lives on a Fly volume
+# attached to the deployed app — not on a fresh GitHub Actions VM, which
+# starts empty every run.
+#
+# Setup:
+#   1. flyctl auth token   -> copy the output
+#   2. In the GitHub repo: Settings -> Secrets and variables -> Actions
+#      -> New repository secret -> name it FLY_API_TOKEN, paste the token
+#   3. Set FLY_APP_NAME below (or override via a repo variable) if you
+#      renamed the app in fly.toml away from "dpdp-drift-scanner"
+#   4. Adjust the cron schedules if you don't want the defaults
+#
+# Test both jobs manually first via the Actions tab -> "DPDP scan + health
+# check" -> "Run workflow", before trusting the schedule.
+#
+# Clients themselves are NOT listed here — `run_scan.py --all` reads every
+# active client straight from the deployed app's own database (add clients
+# via the dashboard's "+ Add Client" page, or `run_scan.py --domain ...`
+# once by hand). This means onboarding a new client never requires editing
+# this file.
+
+name: DPDP scan + health check
+
+env:
+  FLY_APP_NAME: dpdp-drift-scanner
+
+on:
+  schedule:
+    # Weekly scan: Monday 06:00 UTC = 11:30 AM IST.
+    - cron: "0 6 * * 1"
+    # Daily fleet health check: 07:00 UTC = 12:30 PM IST — catches a
+    # silently-stopped cron or a client stuck failing before it's been
+    # broken for a week (see app/ops.py).
+    - cron: "0 7 * * *"
+  workflow_dispatch: {}  # lets you trigger either job manually from the Actions tab
+
+jobs:
+  scan:
+    # Only run the weekly-scan schedule (or a manual trigger) as the scan
+    # job — the daily 07:00 cron is the health-check job below instead.
+    if: github.event.schedule == '0 6 * * 1' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # fly.toml sets auto_stop_machines=suspend to stay on the free tier
+      # when idle, so the machine may be asleep when this cron fires.
+      - name: Ensure machine is running
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl machine list --app "$FLY_APP_NAME" --json > machines.json
+          MACHINE_ID=$(jq -r '.[0].id' machines.json)
+          flyctl machine start "$MACHINE_ID" --app "$FLY_APP_NAME" || true
+          sleep 10
+
+      - name: Scan every active client
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl ssh console --app "$FLY_APP_NAME" -C "python run_scan.py --all"
+
+  health_check:
+    if: github.event.schedule == '0 7 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Ensure machine is running
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl machine list --app "$FLY_APP_NAME" --json > machines.json
+          MACHINE_ID=$(jq -r '.[0].id' machines.json)
+          flyctl machine start "$MACHINE_ID" --app "$FLY_APP_NAME" || true
+          sleep 10
+
+      # Exits non-zero if any client is stale or consistently failing —
+      # fails this Action step, so a red X in GitHub is your signal to look
+      # (or wire up a Slack/email step here on failure, using this job's
+      # own conclusion).
+      - name: Run fleet health self-check
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl ssh console --app "$FLY_APP_NAME" -C "python -m app.ops"

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Review Queue — DPDP Drift Scanner{% endblock %}
+{% block content %}
+<h1>Human review queue</h1>
+<p class="muted">Every low-confidence finding lands here — never straight to a client. Confirm or dismiss before it can inform an alert or draft.</p>
+
+{% if not items %}
+<div class="card empty">Nothing pending review.</div>
+{% else %}
+<table>
+  <tr><th>Client</th><th>Type</th><th>Detail</th><th>Page</th><th>Queued at</th></tr>
+  {% for i in items %}
+  <tr>
+    <td>{{ i.domain }}</td>
+    <td>{{ i.type }}</td>
+    <td>{{ i.detail }}</td>
+    <td class="muted">{{ i.page_url }}</td>
+    <td>{{ i.created_at }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

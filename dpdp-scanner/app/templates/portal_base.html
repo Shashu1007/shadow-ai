@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Client Portal — DPDP Drift Scanner{% endblock %}</title>
+  <style>
+    :root {
+      --bg: #0f1420; --panel: #161d2e; --border: #263049; --text: #e6e9f0;
+      --muted: #8b93a7; --high: #e5484d; --medium: #f5a623; --low: #6b7280;
+      --accent: #5b8def; --green: #3fb950;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+           background: var(--bg); color: var(--text); }
+    header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 14px 24px;
+              display: flex; align-items: center; justify-content: space-between; }
+    header a.brand { color: var(--text); text-decoration: none; font-weight: 600; font-size: 16px; }
+    header nav a, header nav button.linklike { color: var(--muted); text-decoration: none; margin-left: 18px; font-size: 14px;
+                    background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+    header nav a:hover, header nav button.linklike:hover { color: var(--text); }
+    main { max-width: 900px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    h2 { font-size: 17px; margin-top: 28px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 13.5px; vertical-align: top; }
+    th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    a { color: var(--accent); }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-top: 14px; }
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+    .badge-high { background: rgba(229,72,77,0.15); color: var(--high); }
+    .badge-medium { background: rgba(245,166,35,0.15); color: var(--medium); }
+    .badge-low { background: rgba(107,114,128,0.2); color: var(--low); }
+    .badge-draft { background: rgba(91,141,239,0.15); color: var(--accent); }
+    .badge-approved { background: rgba(63,185,80,0.15); color: var(--green); }
+    .badge-rejected { background: rgba(229,72,77,0.15); color: var(--high); }
+    .btn { display: inline-block; background: var(--accent); color: #fff; border: none; padding: 6px 12px;
+           border-radius: 6px; font-size: 13px; cursor: pointer; text-decoration: none; }
+    .btn-danger { background: var(--high); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    form.inline { display: inline; }
+    input[type=text], input[type=password] { background: #0b101c; border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; width: 100%; }
+    label { font-size: 13px; color: var(--muted); display: block; margin: 10px 0 4px; }
+    .empty { color: var(--muted); font-style: italic; padding: 18px 0; }
+    .stat-row { display: flex; gap: 14px; margin-top: 10px; }
+    .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; flex: 1; }
+    .stat .n { font-size: 20px; font-weight: 700; }
+    .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+    code { background: #0b101c; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; font-size: 12.5px; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="brand">🔎 Client Portal{% if client %} · {{ client.domain }}{% endif %}</span>
+    {% if client %}
+    <nav>
+      <a href="{{ url_for('portal.dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('portal.drafts') }}">Drafts</a>
+      <form class="inline" method="post" action="{{ url_for('portal.logout') }}" style="margin-left:18px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="linklike" type="submit">Log out</button>
+      </form>
+    </nav>
+    {% endif %}
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

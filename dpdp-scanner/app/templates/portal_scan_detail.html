@@ -1,0 +1,23 @@
+{% extends "portal_base.html" %}
+{% block title %}Scan #{{ scan.id }} — {{ client.domain }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('portal.dashboard') }}">← Dashboard</a></p>
+<h1>Scan #{{ scan.id }} findings</h1>
+<p class="muted">{{ scan.scanned_at }} · {{ findings|length }} findings on this scan.</p>
+
+{% if not findings %}
+<div class="card empty">No findings on this scan.</div>
+{% else %}
+<table>
+  <tr><th>Type</th><th>DPDP relevance</th><th>Detail</th><th>Page</th></tr>
+  {% for f in findings %}
+  <tr>
+    <td>{{ f.type }}</td>
+    <td>{{ f.dpdp_relevance }}</td>
+    <td>{{ f.detail }}</td>
+    <td class="muted">{{ f.page_url }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

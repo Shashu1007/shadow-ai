@@ -1,0 +1,49 @@
+DPDP Drift Scanner — MVP build notes
+
+Built from dpdp-scanner-mvp-spec.md. Delivered as dpdp-scanner-mvp.zip on 2026-08-19.
+
+What was built
+
+Full four-agent pipeline per spec: Crawler (Playwright) → Classifier (Gemini or rule-based mock) → Diff Agent (pure code) → Notifier (WhatsApp-format + dashboard). SQLite storage matching the spec's schema (clients/scans/findings/diffs, plus alerts/review_queue/drafts tables). Flask dashboard for client list, scan history, diff view, alert log, human review queue, and auto-drafted notice/inventory content.
+
+Stack deviation from spec
+
+Spec assumed FastAPI. The build sandbox had no PyPI network access (org-level egress allowlist, not a transient pip issue), so the dashboard was built on Flask instead — already available in-sandbox along with Jinja2, SQLite, Playwright, BeautifulSoup, pydantic. Functionally identical for MVP purposes; requirements.txt still lists the original FastAPI stack for whoever wants to swap it back (same-day change, nothing else in the pipeline depends on the web framework).
+
+Gemini classifier is swappable via GEMINI_API_KEY env var — ships with a deterministic rule-based mock classifier as the default so the full pipeline runs without any API key, and drops in real Gemini JSON-mode calls the moment a key is set (falls back to mock automatically on API error).
+
+WhatsApp notifier logs the exact message text + persists to the dashboard (channel=whatsapp_sim) rather than calling a live provider — no Twilio/WhatsApp Cloud API account was available. send_whatsapp() is the single swap point.
+
+Scheduling is a CLI (run_scan.py) meant to be cron'd, rather than an in-process scheduler (no APScheduler in-sandbox, and cron is simpler for an MVP anyway).
+
+Two real bugs found during verification (now fixed + regression-tested)
+Consent banner evaluated per-page — falsely flagged every subpage without an inline banner as "missing" even when the homepage had one covering the whole site. Fixed: single site-wide consent-banner finding per scan.
+detail_hash keyed on current content/state instead of stable identity — privacy policy text edits and consent-banner present→absent transitions both showed up as "old finding removed + new finding appeared" (two alerts, one of them misleadingly saying "page no longer reachable") instead of one "changed" event. Fixed by keying the hash on identity (page URL / constant site-wide key) and letting the diff compare detail content instead.
+
+Both fixes were found by running a real multi-scan sequence against a local fixture site (tests/fixture_site/) simulating the spec's own example scenario (a Hotjar tracker added to /pricing) plus a privacy-policy edit and a consent- banner removal — not just spec-reading.
+
+Verification performed
+19 unit tests (tests/test_classifier.py, tests/test_differ.py) covering every category in the spec's detection table, severity scoring rules, and both bug-fix regressions.
+End-to-end runs against a local fixture site (crawler → classifier → diff → notifier → DB → dashboard), confirming: quiet baseline on first scan (no alert spam), correct HIGH alert on new tracker (spec's own demo scenario), correct MEDIUM on privacy policy change, correct HIGH on consent banner disappearing, low-confidence auth-route finding correctly routed to human review queue instead of client-facing alert.
+All 9 dashboard routes verified rendering real data; "mark handled" flow verified end to end.
+Known gap / explicit next step
+
+Per the spec's own build order: before any real customer, a compliance-literate person needs to review the classifier's DPDP mapping logic (app/config.py field patterns, app/agents/classifier.py relevance rules) against 10-15 real findings. Not done — the mock classifier's tagging is a reasonable first pass, not a compliance sign-off. Flagged clearly in the delivered README.
+
+Deployment (added 2026-08-19, same day as build)
+
+User asked how to actually run this (which IDE, where to host). IDE guidance was minimal — they already have an editor preference, and nothing about this project needs anything special beyond Python support. Hosting: recommended Fly.io as the cheapest option that still supports Playwright/Chromium + persistent SQLite storage (ruled out pure serverless/static tiers since the crawler needs a real headless-browser-capable container, not a Lambda-style function). Added, both using the same Dockerfile:
+
+Dockerfile — based on Microsoft's official Playwright Python image (avoids manually apt-installing ~15 Chromium system libraries), runs gunicorn (not Flask's dev server — that one's single-threaded and its debug mode is an RCE risk if ever exposed).
+fly.toml — scale-to-zero web service + persistent volume for SQLite. Flagged honestly in comments: could not be validated against a live Fly account (no outbound network to Fly's API from the build sandbox), so told the user to run fly config validate before first real deploy.
+railway.json — alternative for less CLI/Docker fiddling; Railway's native cron avoids Fly's "is the machine awake" scheduling wrinkle.
+.github/workflows/weekly-scan.yml — cron-triggered weekly scan via fly ssh console, with an explicit machine-wake step since Fly's scale-to-zero means the target machine may be asleep when cron fires.
+DEPLOY.md — step-by-step for both platforms, plus a security note (dashboard currently has NO auth — fine for a trusted pilot, flagged as a gap before wider rollout) and a scaling note (SQLite→Postgres path).
+
+Found and fixed one real deploy-breaking bug while wiring this up: init_db() was only called inside if __name__ == "__main__" in app/web.py, which gunicorn never executes (it imports the module and grabs the app object directly) — under the production Dockerfile CMD, the database schema would never have been created and every route would 500. Fixed by calling init_db() at module import time instead; verified by simulating gunicorn's import pattern directly (importlib.import_module) rather than just reasoning about it.
+
+Could not do a live docker build in the build sandbox (no Docker daemon running, and the base image pull would likely hit the same network egress lockdown that blocked pip/PyPI throughout this build) — flagged this limitation to the user rather than claiming an end-to-end build was verified. Did verify: TOML/JSON/YAML syntax validity of all three config files, full 19-test regression suite still passes, Flask app object is a valid WSGI callable importable the way gunicorn would import it.
+
+Deliverable
+
+dpdp-scanner-mvp.zip (v2, deployment-ready) — full source, README + DEPLOY.md, Dockerfile + fly.toml + railway.json + GitHub Actions cron workflow, a pre-populated demo SQLite DB (regenerated to match the demo scenario described in the README after data/ was added to .dockerignore), and a local test fixture site.

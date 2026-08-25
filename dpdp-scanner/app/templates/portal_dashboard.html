@@ -1,0 +1,53 @@
+{% extends "portal_base.html" %}
+{% block title %}Dashboard — {{ client.domain }}{% endblock %}
+{% block content %}
+<h1>{{ client.domain }}</h1>
+<p class="muted">Plan: {{ client.plan_tier }} · Client since {{ client.created_at }}</p>
+
+<div class="stat-row">
+  <div class="stat"><div class="n">{{ scans|length }}</div><div class="l">Scans logged</div></div>
+  <div class="stat"><div class="n">{{ diffs|length }}</div><div class="l">Diffs run</div></div>
+  <div class="stat"><div class="n">{{ pending_draft_count }}</div><div class="l">Drafts awaiting your decision</div></div>
+</div>
+
+{% if pending_draft_count > 0 %}
+<div class="card" style="border-color: var(--accent); background: rgba(91,141,239,0.08); margin-top:18px;">
+  You have {{ pending_draft_count }} draft{{ 's' if pending_draft_count != 1 else '' }} waiting for your review.
+  <a href="{{ url_for('portal.drafts') }}">Review now →</a>
+</div>
+{% endif %}
+
+<h2>Scan history</h2>
+{% if not scans %}
+<div class="card empty">No scans yet.</div>
+{% else %}
+<table>
+  <tr><th>Scanned at</th><th>Pages</th><th>Status</th><th></th></tr>
+  {% for s in scans %}
+  <tr>
+    <td>{{ s.scanned_at }}</td>
+    <td>{{ s.page_count }}</td>
+    <td>{{ s.status }}</td>
+    <td><a href="{{ url_for('portal.scan_detail', scan_id=s.id) }}">View findings →</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Diff history</h2>
+{% if not diffs %}
+<div class="card empty">No diffs yet — runs after the second scan.</div>
+{% else %}
+<table>
+  <tr><th>Run at</th><th>Severity</th><th>New / Changed / Removed</th><th></th></tr>
+  {% for d in diffs %}
+  <tr>
+    <td>{{ d.created_at }}</td>
+    <td><span class="badge badge-{{ d.severity }}">{{ d.severity }}</span></td>
+    <td>{{ (d.new_json|fmt_findings)|length }} / {{ (d.changed_json|fmt_findings)|length }} / {{ (d.removed_json|fmt_findings)|length }}</td>
+    <td><a href="{{ url_for('portal.diff_detail', diff_id=d.id) }}">View diff →</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

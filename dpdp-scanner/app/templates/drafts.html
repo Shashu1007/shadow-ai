@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Drafts — {{ client.domain }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{{ url_for('client_detail', client_id=client.id) }}">← {{ client.domain }}</a></p>
+<h1>Auto-drafted content</h1>
+<p class="muted">Templated from new findings. Always a draft — the client reviews and approves before anything goes live.</p>
+
+{% if not drafts %}
+<div class="card empty">No pending drafts.</div>
+{% else %}
+  {% for d in drafts %}
+  <div class="card">
+    <span class="badge badge-medium">{{ d.kind }}</span>
+    <p class="mono" style="margin-top:8px">{{ d.content }}</p>
+    <p class="muted">Created {{ d.created_at }} · status: {{ d.status }}</p>
+  </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}
